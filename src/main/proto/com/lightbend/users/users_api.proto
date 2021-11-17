@@ -1,0 +1,71 @@
+// This is the public API offered by your entity.
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+import "akkaserverless/annotations.proto";
+import "google/api/annotations.proto";
+
+package com.lightbend.users;
+
+option java_outer_classname = "UsersApi";
+
+message AddUser {
+  string name = 20;
+  string street = 30;
+  string city = 40;
+  string state = 50;
+  string country = 60;
+  string zip = 70;
+}
+
+message DeleteUser {
+  string user_id = 10 [(akkaserverless.field).entity_key = true];
+}
+
+message GetUser {
+  string user_id = 10 [(akkaserverless.field).entity_key = true];
+}
+
+message User {
+  string user_id = 10;
+  string name = 20;
+  string street = 30;
+  string city = 40;
+  string state = 50;
+  string country = 60;
+  string zip = 70;
+}
+
+message Users {
+  repeated User users = 10;
+}
+
+service UsersService {
+  option (akkaserverless.service) = {
+    type: SERVICE_TYPE_ENTITY
+    component: "com.lightbend.users.domain.Users"
+  };
+
+  rpc AddUser(AddUser) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/users/add"
+      body: "*"
+    };
+  }
+
+  rpc DeleteUser(DeleteUser) returns (google.protobuf.Empty) {
+    option (google.api.http).post = "/user/{user_id}/delete";
+  }
+
+  rpc GetUser(GetUser) returns (User) {
+    option (google.api.http) = {
+      get: "/users/{user_id}"
+    };
+  }
+
+  rpc GetUsers() returns (Users) {
+    option (google.api.http) = {
+      get: "/users"
+    }
+  }
+}

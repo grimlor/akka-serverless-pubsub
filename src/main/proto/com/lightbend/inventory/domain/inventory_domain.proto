@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package com.lightbend.inventory.domain;
+
+import "akkaserverless/annotations.proto";
+
+option java_outer_classname = "InventoryDomain";
+
+option (akkaserverless.file).event_sourced_entity = {
+  name: "Inventory"
+  entity_type: "inventory"
+  state: "Inventory"
+  events: ["ItemAdded", "ItemRemoved"]
+};
+
+message Item {
+  string product_id = 10;
+  string name = 20;
+  string description = 30;
+  string condition = 40;
+  int32 count = 50;
+}
+
+message ItemAdded {
+  Item item = 10;
+}
+
+message ItemRemoved {
+  string product_id = 10;
+}
+
+message Inventory {
+  repeated Item items = 10;
+}

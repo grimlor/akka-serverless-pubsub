@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package com.lightbend.users.domain;
+
+import "akkaserverless/annotations.proto";
+
+option java_outer_classname = "UsersDomain";
+
+option (akkaserverless.file).event_sourced_entity = {
+  name: "Users"
+  entity_type: "users"
+  state: "Users"
+  events: ["UserAdded", "UserDeleted"]
+};
+
+message User {
+  string user_id = 10;
+  string name = 20;
+  string street = 30;
+  string city = 40;
+  string state = 50;
+  string country = 60;
+  string zip = 70;
+}
+
+message UserAdded {
+  User user = 10;
+}
+
+message UserDeleted {
+  string user_id = 10;
+}
+
+message Users {
+  repeated User users = 10;
+}
