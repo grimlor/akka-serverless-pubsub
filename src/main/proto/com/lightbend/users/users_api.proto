@@ -5,11 +5,12 @@ import "google/protobuf/empty.proto";
 import "akkaserverless/annotations.proto";
 import "google/api/annotations.proto";
 
-package com.lightbend.users;
+package com.lightbend.aspubsub.users;
 
 option java_outer_classname = "UsersApi";
 
-message AddUser {
+message AddUserMsg {
+  string email = 10;
   string name = 20;
   string street = 30;
   string city = 40;
@@ -18,16 +19,20 @@ message AddUser {
   string zip = 70;
 }
 
-message DeleteUser {
+message DeleteUserMsg {
   string user_id = 10 [(akkaserverless.field).entity_key = true];
 }
 
-message GetUser {
+message GetUserMsg {
   string user_id = 10 [(akkaserverless.field).entity_key = true];
+}
+
+message GetUsersMsg {
 }
 
 message User {
-  string user_id = 10;
+  string user_id = 5;
+  string email = 10;
   string name = 20;
   string street = 30;
   string city = 40;
@@ -43,29 +48,29 @@ message Users {
 service UsersService {
   option (akkaserverless.service) = {
     type: SERVICE_TYPE_ENTITY
-    component: "com.lightbend.users.domain.Users"
+    component: "com.lightbend.aspubsub.users.domain.Users"
   };
 
-  rpc AddUser(AddUser) returns (google.protobuf.Empty) {
+  rpc AddUser(AddUserMsg) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/users/add"
       body: "*"
     };
   }
 
-  rpc DeleteUser(DeleteUser) returns (google.protobuf.Empty) {
+  rpc DeleteUser(DeleteUserMsg) returns (google.protobuf.Empty) {
     option (google.api.http).post = "/user/{user_id}/delete";
   }
 
-  rpc GetUser(GetUser) returns (User) {
+  rpc GetUser(GetUserMsg) returns (User) {
     option (google.api.http) = {
-      get: "/users/{user_id}"
+      get: "/user/{user_id}"
     };
   }
 
-  rpc GetUsers() returns (Users) {
+  rpc GetUsers(GetUsersMsg) returns (Users) {
     option (google.api.http) = {
       get: "/users"
-    }
+    };
   }
 }

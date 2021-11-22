@@ -5,29 +5,30 @@ import "google/protobuf/empty.proto";
 import "akkaserverless/annotations.proto";
 import "google/api/annotations.proto";
 
-package com.lightbend.inventory;
+package com.lightbend.aspubsub.inventory;
 
 option java_outer_classname = "InventoryApi";
 
-message AddItem {
+message AddItemMsg {
   string user_id = 10 [(akkaserverless.field).entity_key = true];
-  string product_id = 20;
-  string name = 20;
+  string item_id = 20;
+  string name = 30;
   string description = 40;
+  string condition = 45;
   int32 count = 50;
 }
 
-message RemoveItem {
+message RemoveItemMsg {
   string user_id = 10 [(akkaserverless.field).entity_key = true];
-  string product_id = 20;
+  string item_id = 20;
 }
 
-message GetInventory {
+message GetInventoryMsg {
   string user_id = 10 [(akkaserverless.field).entity_key = true];
 }
 
 message Item {
-  string product_id = 10;
+  string item_id = 10;
   string name = 20;
   string description = 30;
   string condition = 40;
@@ -41,21 +42,21 @@ message Inventory {
 service InventoryService {
   option (akkaserverless.service) = {
     type : SERVICE_TYPE_ENTITY
-    component : "com.lightbend.inventory.domain.Inventory"
+    component : "com.lightbend.aspubsub.inventory.domain.Inventory"
   };
 
-  rpc AddItem(AddItem) returns (google.protobuf.Empty) {
+  rpc AddItem(AddItemMsg) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/user/{user_id}/items/add"
       body: "*"
     };
   }
 
-  rpc RemoveItem(RemoveItem) returns (google.protobuf.Empty) {
-    option (google.api.http).post = "/user/{user_id}/items/{product_id}/remove";
+  rpc RemoveItem(RemoveItemMsg) returns (google.protobuf.Empty) {
+    option (google.api.http).post = "/user/{user_id}/items/{item_id}/remove";
   }
 
-  rpc GetInventory(GetInventory) returns (Inventory) {
+  rpc GetInventory(GetInventoryMsg) returns (Inventory) {
     option (google.api.http) = {
       get: "/users/{user_id}"
       additional_bindings: {

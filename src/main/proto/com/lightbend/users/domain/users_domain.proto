@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package com.lightbend.users.domain;
+package com.lightbend.aspubsub.users.domain;
 
 import "akkaserverless/annotations.proto";
 
@@ -15,6 +15,7 @@ option (akkaserverless.file).event_sourced_entity = {
 
 message User {
   string user_id = 10;
+  string email = 15;
   string name = 20;
   string street = 30;
   string city = 40;
