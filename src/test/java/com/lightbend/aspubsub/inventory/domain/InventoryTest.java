@@ -1,12 +1,12 @@
 package com.lightbend.aspubsub.inventory.domain;
 
-import com.akkaserverless.javasdk.eventsourcedentity.EventSourcedEntity;
-import com.akkaserverless.javasdk.eventsourcedentity.EventSourcedEntityContext;
 import com.akkaserverless.javasdk.testkit.EventSourcedResult;
 import com.google.protobuf.Empty;
 import com.lightbend.aspubsub.inventory.InventoryApi;
 import org.junit.Test;
 
+import static com.lightbend.aspubsub.inventory.domain.Inventory.domainToApiItem;
+import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
@@ -18,10 +18,21 @@ import static org.hamcrest.MatcherAssert.assertThat;
 public class InventoryTest {
 
   static final String TEST_ITEM_ID = "b097ad72-fefd-47a8-bc21-57f99f15637b";
-  static final String TEST_NAME = "test item";
-  static final String TEST_DESCRIPTION = "test item";
+  static final String TEST_USER_ID = "test user ID";
+  static final String TEST_NAME = "test item name";
+  static final String TEST_DESCRIPTION = "test item description";
   static final String TEST_CONDITION = "good";
   static final int TEST_COUNT = 1;
+
+  static final InventoryDomain.Item TEST_ITEM = InventoryDomain.Item.newBuilder()
+          .setItemId(TEST_ITEM_ID)
+          .setName(TEST_NAME)
+          .setDescription(TEST_DESCRIPTION)
+          .setCondition(TEST_CONDITION)
+          .setCount(TEST_COUNT)
+          .build();
+
+  static final String TEST_COMPUTED_ITEM_ID = Inventory.getOrComputeItemId(TEST_ITEM);
 
   @Test
   public void addItemMissingItemIdTest() {
@@ -31,7 +42,7 @@ public class InventoryTest {
                     .setCount(TEST_COUNT)
                     .build());
 
-    assertThat(result.isError(), is(true));
+    assertThat("Should be an error", result.isError());
   }
 
   @Test
@@ -43,42 +54,133 @@ public class InventoryTest {
                     .setCount(TEST_COUNT)
                     .build());
 
-    assertThat(result.isError(), is(true));
+    assertThat("Should be an error", result.isError());
   }
 
   @Test
   public void addItemTest() {
     InventoryTestKit testKit = InventoryTestKit.of(Inventory::new);
     EventSourcedResult<Empty> result = testKit.addItem(
-      InventoryApi.AddItemMsg.newBuilder()
-        .setUserId("test_user")
-        .setItemId("test_product")
-        .setCount(1)
-        .build());
+            InventoryApi.AddItemMsg.newBuilder()
+                    .setUserId(TEST_USER_ID)
+                    .setItemId(TEST_ITEM_ID)
+                    .setName(TEST_NAME)
+                    .setDescription(TEST_DESCRIPTION)
+                    .setCondition(TEST_CONDITION)
+                    .setCount(TEST_COUNT)
+                    .build());
 
-    assertThat(result.isError(), is(false));
-    assertThat(result.isNoReply(), is(true));
+    // then the response should be empty
+    assertThat(result.getReply(), is(Empty.getDefaultInstance()));
+
+    // and an ItemAdded event should be emitted
+    var expectedEvent = InventoryDomain.ItemAdded.newBuilder()
+            .setItem(TEST_ITEM)
+            .build();
+    var actualEvent = result.getNextEventOfType(InventoryDomain.ItemAdded.class);
+    assertThat(actualEvent, is(expectedEvent));
+
+    // and the item should be added to the state
+    assertThat(testKit.getState(), is(
+            InventoryDomain.Inventory.newBuilder()
+                    .addItems(TEST_ITEM.toBuilder()
+                            .setItemId(TEST_COMPUTED_ITEM_ID)
+                            .build())
+                    .build()));
+  }
+
+
+  @Test
+  public void removeItemMissingItemIdTest() {
+    InventoryTestKit testKit = InventoryTestKit.of(Inventory::new);
+    EventSourcedResult<Empty> result = testKit.removeItem(
+            InventoryApi.RemoveItemMsg.newBuilder()
+                    .build());
+
+    assertThat("Should be an error", result.isError());
+  }
+
+
+  @Test
+  public void removeItemMissingUserIdTest() {
+    InventoryTestKit testKit = InventoryTestKit.of(Inventory::new);
+    EventSourcedResult<Empty> result = testKit.removeItem(
+            InventoryApi.RemoveItemMsg.newBuilder()
+                    .setItemId(TEST_ITEM_ID)
+                    .build());
+
+    assertThat("Should be an error", result.isError());
   }
 
 
   @Test
   public void removeItemTest() {
+    // given a test item exists in the current state
     InventoryTestKit testKit = InventoryTestKit.of(Inventory::new);
-     EventSourcedResult<Empty> result = testKit.removeItem(InventoryApi.RemoveItemMsg.newBuilder().build());
+    testKit.addItem(
+            InventoryApi.AddItemMsg.newBuilder()
+                    .setItemId(TEST_ITEM_ID)
+                    .setUserId(TEST_USER_ID)
+                    .setName(TEST_NAME)
+                    .setDescription(TEST_DESCRIPTION)
+                    .setCondition(TEST_CONDITION)
+                    .setCount(TEST_COUNT)
+                    .build());
 
-    assertThat(result.isError(), is(false));
-    assertThat(result.isNoReply(), is(true));
+    assertThat(testKit.getState(), is(
+            InventoryDomain.Inventory.newBuilder()
+                    .addItems(TEST_ITEM.toBuilder()
+                            .setItemId(TEST_COMPUTED_ITEM_ID)
+                            .build())
+                    .build()));
+
+    // when I remove an item
+    EventSourcedResult<Empty> result = testKit.removeItem(
+            InventoryApi.RemoveItemMsg.newBuilder()
+                    .setUserId(TEST_USER_ID)
+                    .setItemId(TEST_COMPUTED_ITEM_ID)
+                    .build());
+
+    // then the response should be empty
+    assertThat(result.getReply(), is(Empty.getDefaultInstance()));
+
+    // and an ItemRemoved event should be emitted
+    var expectedEvent = InventoryDomain.ItemRemoved.newBuilder()
+            .setItemId(TEST_COMPUTED_ITEM_ID)
+            .build();
+    var actualEvent = result.getNextEventOfType(InventoryDomain.ItemRemoved.class);
+    assertThat(actualEvent, is(expectedEvent));
+
+    // and the test item should no longer be in the state
+    assertThat(testKit.getState(), is(InventoryDomain.Inventory.newBuilder().build()));
   }
 
 
   @Test
   public void getInventoryTest() {
+    // given a test item exists in the current state
     InventoryTestKit testKit = InventoryTestKit.of(Inventory::new);
-     EventSourcedResult<InventoryApi.Inventory> result =
-             testKit.getInventory(InventoryApi.GetInventoryMsg.newBuilder().build());
+    testKit.addItem(
+            InventoryApi.AddItemMsg.newBuilder()
+                    .setUserId(TEST_USER_ID)
+                    .setItemId(TEST_ITEM_ID)
+                    .setName(TEST_NAME)
+                    .setDescription(TEST_DESCRIPTION)
+                    .setCondition(TEST_CONDITION)
+                    .setCount(TEST_COUNT)
+                    .build());
 
-    assertThat(result.isError(), is(false));
-    assertThat(result.isNoReply(), is(true));
+    // when I fetch a user's inventory
+    EventSourcedResult<InventoryApi.Inventory> result = testKit.getInventory(
+            InventoryApi.GetInventoryMsg.newBuilder()
+                    .setUserId(TEST_USER_ID)
+                    .build());
+
+    // then I should get back the user's inventory
+    var items = result.getReply().getItemsList();
+    assertThat(items, hasItem(domainToApiItem(TEST_ITEM).toBuilder()
+            .setItemId(TEST_COMPUTED_ITEM_ID)
+            .build()));
   }
 
 }

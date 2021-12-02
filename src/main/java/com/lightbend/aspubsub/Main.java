@@ -2,6 +2,7 @@ package com.lightbend.aspubsub;
 
 import com.akkaserverless.javasdk.AkkaServerless;
 import com.lightbend.aspubsub.inventory.domain.Inventory;
+import com.lightbend.aspubsub.users.actions.UsersTopicsAction;
 import com.lightbend.aspubsub.users.domain.Users;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,8 +22,9 @@ public final class Main {
     // If you prefer, you may remove this and manually register these components in a
     // `new AkkaServerless()` instance.
     return AkkaServerlessFactory.withComponents(
-      Inventory::new,
-      Users::new);
+            Inventory::new,
+            Users::new,
+            UsersTopicsAction::new);
   }
 
   public static void main(String[] args) throws Exception {

@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package com.lightbend.aspubsub.users.actions;
+
+import "akkaserverless/annotations.proto";
+import "com/lightbend/users/domain/users_domain.proto";
+
+option java_outer_classname = "UsersDeletedTopicApi";
+
+message Deleted {
+  string user_id = 1;
+}
+
+service UsersTopics {
+  option (akkaserverless.service) = {
+    type: SERVICE_TYPE_ACTION
+  };
+
+  rpc DeleteUser(com.lightbend.aspubsub.users.domain.UserDeleted) returns (Deleted) {
+    option (akkaserverless.method).eventing.in = {
+      event_sourced_entity: "user"
+    };
+    option (akkaserverless.method).eventing.out = {
+      topic: "user-deleted"
+    };
+  }
+}

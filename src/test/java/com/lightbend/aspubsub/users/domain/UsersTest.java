@@ -1,12 +1,11 @@
 package com.lightbend.aspubsub.users.domain;
 
-import com.akkaserverless.javasdk.eventsourcedentity.EventSourcedEntity;
-import com.akkaserverless.javasdk.eventsourcedentity.EventSourcedEntityContext;
 import com.akkaserverless.javasdk.testkit.EventSourcedResult;
 import com.google.protobuf.Empty;
 import com.lightbend.aspubsub.users.UsersApi;
 import org.junit.jupiter.api.Test;
 
+import static com.lightbend.aspubsub.users.domain.Users.domainToApiUser;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 
@@ -50,14 +49,16 @@ public class UsersTest {
                     .setZip(TEST_ZIP)
                     .build());
 
-    assertThat(result.isError(), is(true));
+    assertThat("Should be an error", result.isError());
   }
+
 
   @Test
   public void addUserTest() {
+    // given a user service
     UsersTestKit testKit = UsersTestKit.of(Users::new);
 
-    // use the testkit to execute a command
+    // when I add a user
     EventSourcedResult<Empty> result = testKit.addUser(
             UsersApi.AddUserMsg.newBuilder()
                     .setEmail(TEST_EMAIL)
@@ -69,17 +70,17 @@ public class UsersTest {
                     .setZip(TEST_ZIP)
                     .build());
 
-    // verify the response
+    // then the response should be empty
     assertThat(result.getReply(), is(Empty.getDefaultInstance()));
 
-    // verify the emitted events
+    // and a UserAdded event should be emitted
     var expectedEvent = UsersDomain.UserAdded.newBuilder()
             .setUser(TEST_USER)
             .build();
     var actualEvent = result.getNextEventOfType(UsersDomain.UserAdded.class);
     assertThat(actualEvent, is(expectedEvent));
 
-    // verify the final state after applying the events
+    // and the user should be added to the state
     assertThat(testKit.getState(), is(
             UsersDomain.Users.newBuilder()
                     .addUsers(TEST_USER.toBuilder()
@@ -96,53 +97,131 @@ public class UsersTest {
             UsersApi.DeleteUserMsg.newBuilder().build()
     );
 
-    assertThat(result.isError(), is(true));
+    assertThat("Should be an error", result.isError());
   }
 
 
   @Test
   public void deleteUserTest() {
+    // given a test user exists in the current state
     UsersTestKit testKit = UsersTestKit.of(Users::new);
+    testKit.addUser(
+            UsersApi.AddUserMsg.newBuilder()
+                    .setEmail(TEST_EMAIL)
+                    .setName(TEST_NAME)
+                    .setStreet(TEST_STREET)
+                    .setCity(TEST_CITY)
+                    .setState(TEST_STATE)
+                    .setCountry(TEST_COUNTRY)
+                    .setZip(TEST_ZIP)
+                    .build());
 
-    // use the testkit to execute a command
+    assertThat(testKit.getState(), is(
+            UsersDomain.Users.newBuilder()
+                    .addUsers(TEST_USER.toBuilder()
+                            .setUserId(TEST_USER_ID)
+                            .build())
+                    .build()));
+
+    // when I delete a user
     EventSourcedResult<Empty> result = testKit.deleteUser(
             UsersApi.DeleteUserMsg.newBuilder()
                     .setUserId(TEST_USER_ID)
                     .build());
 
-    // verify the response
+    // then the response should be empty
     assertThat(result.getReply(), is(Empty.getDefaultInstance()));
 
-    // verify the emitted events
+    // and a UserDeleted event should be emitted
     var expectedEvent = UsersDomain.UserDeleted.newBuilder()
-            .setUserId(TEST_USER_ID);
+            .setUserId(TEST_USER_ID)
+            .build();
     var actualEvent = result.getNextEventOfType(UsersDomain.UserDeleted.class);
     assertThat(actualEvent, is(expectedEvent));
 
-    // verify the final state after applying the events
-    assertThat(testKit.getState(), is(
-            UsersDomain.Users.newBuilder().build()
-    ));
+    // and the test user should no longer be in the state
+    assertThat(testKit.getState(), is(UsersDomain.Users.newBuilder().build()));
+  }
+
+
+  @Test
+  public void getMissingUserTest() {
+    // given an empty state
+    UsersTestKit testKit = UsersTestKit.of(Users::new);
+
+    // when I fetch a user with a user ID not found in the state
+    EventSourcedResult<UsersApi.User> result = testKit.getUser(
+            UsersApi.GetUserMsg.newBuilder()
+                    .setUserId(TEST_USER_ID)
+                    .build());
+
+    // then I should get back an error
+    assertThat(result.isError(), is(true));
+    assertThat(result.getError(), containsString(TEST_USER_ID));
   }
 
 
   @Test
   public void getUserTest() {
+    // given a test user exists in the current state
     UsersTestKit testKit = UsersTestKit.of(Users::new);
-    EventSourcedResult<UsersApi.User> result = testKit.getUser(UsersApi.GetUserMsg.newBuilder().build());
+    testKit.addUser(
+            UsersApi.AddUserMsg.newBuilder()
+                    .setEmail(TEST_EMAIL)
+                    .setName(TEST_NAME)
+                    .setStreet(TEST_STREET)
+                    .setCity(TEST_CITY)
+                    .setState(TEST_STATE)
+                    .setCountry(TEST_COUNTRY)
+                    .setZip(TEST_ZIP)
+                    .build());
 
-    assertThat(result.isError(), is(false));
-    assertThat(result.isNoReply(), is(true));
+    // when I fetch the user with its user ID
+    EventSourcedResult<UsersApi.User> result = testKit.getUser(
+            UsersApi.GetUserMsg.newBuilder()
+                    .setUserId(TEST_USER_ID)
+                    .build());
+
+    // then I should get back the user from state
+    assertThat(result.getReply(), is(
+            UsersApi.User.newBuilder()
+                    .setUserId(TEST_USER_ID)
+                    .setEmail(TEST_EMAIL)
+                    .setName(TEST_NAME)
+                    .setStreet(TEST_STREET)
+                    .setCity(TEST_CITY)
+                    .setState(TEST_STATE)
+                    .setCountry(TEST_COUNTRY)
+                    .setZip(TEST_ZIP)
+                    .build()));
   }
 
 
   @Test
   public void getUsersTest() {
+    // given a test user exists in the current state
     UsersTestKit testKit = UsersTestKit.of(Users::new);
-    EventSourcedResult<UsersApi.Users> result = testKit.getUsers(UsersApi.GetUsersMsg.newBuilder().build());
+    testKit.addUser(
+            UsersApi.AddUserMsg.newBuilder()
+                    .setEmail(TEST_EMAIL)
+                    .setName(TEST_NAME)
+                    .setStreet(TEST_STREET)
+                    .setCity(TEST_CITY)
+                    .setState(TEST_STATE)
+                    .setCountry(TEST_COUNTRY)
+                    .setZip(TEST_ZIP)
+                    .build());
 
-    assertThat(result.isError(), is(false));
-    assertThat(result.isNoReply(), is(true));
+    // when I fetch all users
+    EventSourcedResult<UsersApi.Users> result = testKit.getUsers(
+            UsersApi.GetUsersMsg.newBuilder()
+                    .build());
+
+    // then I should get back a list of users containing the test user
+    var users = result.getReply().getUsersList();
+    assertThat(users, hasItem(domainToApiUser(TEST_USER).toBuilder()
+            .setUserId(TEST_USER_ID)
+            .build()));
   }
 
 }

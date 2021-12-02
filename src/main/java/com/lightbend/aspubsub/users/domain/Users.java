@@ -22,6 +22,42 @@ public class Users extends AbstractUsers {
   @SuppressWarnings("unused")
   private final String entityId;
 
+  static protected UsersApi.User domainToApiUser(UsersDomain.User domainUser) {
+    return UsersApi.User.newBuilder()
+            .setUserId(domainUser.getUserId())
+            .setName(domainUser.getName())
+            .setEmail(domainUser.getEmail())
+            .setStreet(domainUser.getStreet())
+            .setCity(domainUser.getCity())
+            .setState(domainUser.getState())
+            .setCountry(domainUser.getCountry())
+            .setZip(domainUser.getZip())
+            .build();
+  }
+
+  static protected UsersApi.Users domainToApiUsers(UsersDomain.Users domainUsers) {
+    return UsersApi.Users.newBuilder()
+            .addAllUsers(domainUsers.getUsersList().stream().map(
+                    user -> UsersApi.User.newBuilder()
+                            .setUserId(user.getUserId())
+                            .setEmail(user.getEmail())
+                            .setName(user.getName())
+                            .setStreet(user.getStreet())
+                            .setCity(user.getCity())
+                            .setState(user.getState())
+                            .setCountry(user.getCountry())
+                            .setZip(user.getZip())
+                            .build())
+                    .collect(Collectors.toList()))
+            .build();
+  }
+
+  static protected String getOrComputeUserId(UsersDomain.User user) {
+    return user.getUserId().isEmpty()
+            ? DigestUtils.sha256Hex(user.getEmail())
+            : user.getUserId();
+  }
+
   public Users(EventSourcedEntityContext context) {
     this.entityId = context.entityId();
   }
@@ -69,12 +105,16 @@ public class Users extends AbstractUsers {
 
   @Override
   public Effect<UsersApi.User> getUser(UsersDomain.Users currentState, UsersApi.GetUserMsg getUserMsg) {
-    return effects().error("The command handler for `GetUser` is not implemented, yet");
+    var user = findUserByUserId(currentState, getUserMsg.getUserId());
+    if (user.isPresent()) {
+      return effects().reply(domainToApiUser(user.get()));
+    }
+    return effects().error("No user found for given user ID " + getUserMsg.getUserId());
   }
 
   @Override
   public Effect<UsersApi.Users> getUsers(UsersDomain.Users currentState, UsersApi.GetUsersMsg getUsersMsg) {
-    return effects().error("The command handler for `GetUsers` is not implemented, yet");
+    return effects().reply(domainToApiUsers(currentState));
   }
 
   @Override
@@ -86,12 +126,6 @@ public class Users extends AbstractUsers {
     users.sort(Comparator.comparing(UsersDomain.User::getName));
 
     return UsersDomain.Users.newBuilder().addAllUsers(users).build();
-  }
-
-  static protected String getOrComputeUserId(UsersDomain.User user) {
-    return user.getUserId().isEmpty()
-            ? DigestUtils.sha256Hex(user.getEmail())
-            : user.getUserId();
   }
 
   private UsersDomain.User updateUserIfExists(UsersDomain.User user, UsersDomain.Users users) {
@@ -122,7 +156,10 @@ public class Users extends AbstractUsers {
 
   @Override
   public UsersDomain.Users userDeleted(UsersDomain.Users currentState, UsersDomain.UserDeleted userDeleted) {
-    throw new RuntimeException("The event handler for `UserDeleted` is not implemented, yet");
+    List<UsersDomain.User> users = removeUserByUserIdIfExists(currentState, userDeleted.getUserId());
+    users.sort(Comparator.comparing(UsersDomain.User::getName));
+
+    return UsersDomain.Users.newBuilder().addAllUsers(users).build();
   }
 
 }
