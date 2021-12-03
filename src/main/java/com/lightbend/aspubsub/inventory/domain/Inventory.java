@@ -1,7 +1,5 @@
 package com.lightbend.aspubsub.inventory.domain;
 
-import com.akkaserverless.javasdk.eventsourcedentity.EventSourcedEntity;
-import com.akkaserverless.javasdk.eventsourcedentity.EventSourcedEntity.Effect;
 import com.akkaserverless.javasdk.eventsourcedentity.EventSourcedEntityContext;
 import com.google.protobuf.Empty;
 import com.lightbend.aspubsub.inventory.InventoryApi;
@@ -23,7 +21,7 @@ public class Inventory extends AbstractInventory {
   @SuppressWarnings("unused")
   private final String entityId;
 
-  static protected InventoryApi.Item domainToApiItem(InventoryDomain.Item domainItem) {
+  protected static InventoryApi.Item domainToApiItem(InventoryDomain.Item domainItem) {
     return InventoryApi.Item.newBuilder()
             .setItemId(domainItem.getItemId())
             .setName(domainItem.getName())
@@ -33,7 +31,7 @@ public class Inventory extends AbstractInventory {
             .build();
   }
 
-  static protected InventoryApi.Inventory domainToApiInventory(InventoryDomain.Inventory domainInventory) {
+  protected static InventoryApi.Inventory domainToApiInventory(InventoryDomain.Inventory domainInventory) {
     return InventoryApi.Inventory.newBuilder()
             .addAllItems(domainInventory.getItemsList().stream().map(
                     item -> InventoryApi.Item.newBuilder()
@@ -47,7 +45,7 @@ public class Inventory extends AbstractInventory {
             .build();
   }
 
-  static protected String getOrComputeItemId(InventoryDomain.Item item) {
+  protected static String getOrComputeItemId(InventoryDomain.Item item) {
     var itemId = item.getItemId();
     if (!itemId.endsWith(item.getCondition())) {
       itemId = (itemId.isEmpty() ? UUID.randomUUID() : itemId) + "-" + item.getCondition();

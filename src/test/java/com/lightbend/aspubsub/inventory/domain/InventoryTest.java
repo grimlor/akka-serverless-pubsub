@@ -17,14 +17,14 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 public class InventoryTest {
 
-  static final String TEST_ITEM_ID = "b097ad72-fefd-47a8-bc21-57f99f15637b";
-  static final String TEST_USER_ID = "test user ID";
-  static final String TEST_NAME = "test item name";
-  static final String TEST_DESCRIPTION = "test item description";
-  static final String TEST_CONDITION = "good";
-  static final int TEST_COUNT = 1;
+  public static final String TEST_ITEM_ID = "b097ad72-fefd-47a8-bc21-57f99f15637b";
+  public static final String TEST_USER_ID = "test user ID";
+  public static final String TEST_NAME = "test item name";
+  public static final String TEST_DESCRIPTION = "test item description";
+  public static final String TEST_CONDITION = "good";
+  public static final int TEST_COUNT = 1;
 
-  static final InventoryDomain.Item TEST_ITEM = InventoryDomain.Item.newBuilder()
+  public static final InventoryDomain.Item TEST_ITEM = InventoryDomain.Item.newBuilder()
           .setItemId(TEST_ITEM_ID)
           .setName(TEST_NAME)
           .setDescription(TEST_DESCRIPTION)
@@ -32,7 +32,7 @@ public class InventoryTest {
           .setCount(TEST_COUNT)
           .build();
 
-  static final String TEST_COMPUTED_ITEM_ID = Inventory.getOrComputeItemId(TEST_ITEM);
+  public static final String TEST_COMPUTED_ITEM_ID = Inventory.getOrComputeItemId(TEST_ITEM);
 
   @Test
   public void addItemMissingItemIdTest() {
@@ -153,6 +153,23 @@ public class InventoryTest {
 
     // and the test item should no longer be in the state
     assertThat(testKit.getState(), is(InventoryDomain.Inventory.newBuilder().build()));
+  }
+
+
+  @Test
+  public void getMissingInventoryTest() {
+    // given that no inventory exists for the specified user
+    InventoryTestKit testKit = InventoryTestKit.of(Inventory::new);
+
+    // when I fetch that user's inventory
+    EventSourcedResult<InventoryApi.Inventory> result = testKit.getInventory(
+            InventoryApi.GetInventoryMsg.newBuilder()
+                    .setUserId(TEST_USER_ID)
+                    .build());
+
+    // Then I should get back an empty Inventory
+    var items = result.getReply().getItemsList();
+    assertThat(items.isEmpty(), is(true));
   }
 
 

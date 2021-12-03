@@ -22,7 +22,7 @@ public class Users extends AbstractUsers {
   @SuppressWarnings("unused")
   private final String entityId;
 
-  static protected UsersApi.User domainToApiUser(UsersDomain.User domainUser) {
+  protected static UsersApi.User domainToApiUser(UsersDomain.User domainUser) {
     return UsersApi.User.newBuilder()
             .setUserId(domainUser.getUserId())
             .setName(domainUser.getName())
@@ -35,7 +35,7 @@ public class Users extends AbstractUsers {
             .build();
   }
 
-  static protected UsersApi.Users domainToApiUsers(UsersDomain.Users domainUsers) {
+  protected static UsersApi.Users domainToApiUsers(UsersDomain.Users domainUsers) {
     return UsersApi.Users.newBuilder()
             .addAllUsers(domainUsers.getUsersList().stream().map(
                     user -> UsersApi.User.newBuilder()
@@ -52,7 +52,7 @@ public class Users extends AbstractUsers {
             .build();
   }
 
-  static protected String getOrComputeUserId(UsersDomain.User user) {
+  protected static String getOrComputeUserId(UsersDomain.User user) {
     return user.getUserId().isEmpty()
             ? DigestUtils.sha256Hex(user.getEmail())
             : user.getUserId();

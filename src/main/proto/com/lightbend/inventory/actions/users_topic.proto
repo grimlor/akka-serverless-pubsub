@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package com.lightbend.aspubsub.inventory.actions;
+
+import "google/protobuf/empty.proto";
+import "akkaserverless/annotations.proto";
+import "com/lightbend/users/actions/users_topic.proto";
+
+option java_outer_classname = "UsersTopicSubApi";
+
+service UsersTopicSubscription {
+  option (akkaserverless.service) = {
+    type: SERVICE_TYPE_ACTION
+  };
+
+  rpc Delete(com.lightbend.aspubsub.users.actions.Deleted) returns (google.protobuf.Empty) {
+    option (akkaserverless.method).eventing.in = {
+      topic: "users-events"
+    };
+  }
+}

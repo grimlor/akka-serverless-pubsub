@@ -5,13 +5,13 @@ package com.lightbend.aspubsub.users.actions;
 import "akkaserverless/annotations.proto";
 import "com/lightbend/users/domain/users_domain.proto";
 
-option java_outer_classname = "UsersDeletedTopicApi";
+option java_outer_classname = "UsersTopicApi";
 
 message Deleted {
   string user_id = 1;
 }
 
-service UsersTopics {
+service UsersTopic {
   option (akkaserverless.service) = {
     type: SERVICE_TYPE_ACTION
   };
@@ -21,7 +21,7 @@ service UsersTopics {
       event_sourced_entity: "user"
     };
     option (akkaserverless.method).eventing.out = {
-      topic: "user-deleted"
+      topic: "users-events"
     };
   }
 }
